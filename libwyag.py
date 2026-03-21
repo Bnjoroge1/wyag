@@ -96,5 +96,26 @@ def repo_path(repo: GitRepository, *path: list) -> Path:
      """compute path under repo's gitdir"""
      return os.path.join(repo.gitdir, *path)
 
-def repo_file(repo: GitRepository, *path:list) -> Path | None:
-     """same as repo_path but create_dirname(*path) if asbsent."""
+def repo_file(repo: GitRepository, *path: list, mkdir: bool = False) -> Path | None:
+     """same as repo_path but create_dirname(*path) if asbsent.
+     For
+     example, repo_file(r, \"refs\", \"remotes\", \"origin\", \"HEAD\") will create
+.git/refs/remotes/origin.
+     """
+     if repo_dir(repo, *path[:-1], mkdir=mkdir):
+          return repo_path(repo, *path)
+     
+def repo_dir(repo: GitRepository, *path: list, mkdir: bool =False) -> Path | None:
+     """same as repo path but mkdir *path if absent if mkdir"""
+     path = repo_path(repo, *path)
+     
+     if os.path.exists(path):
+          if (os.path.isdir(path)):
+               return path
+          else:
+               return Exception(f"Not a directory: {path}")
+     if mkdir:
+          os.makedirs(path)
+          return path
+     else:
+          return None
