@@ -17,7 +17,19 @@ import zlib
 
 argparser = argparse.ArgumentParser(description="very dumb git")
 argsubparsers = argparser.add_subparsers(title="Commands", dest="command")
+
 argsubparsers.required = True
+
+argsp = argsubparsers.add_parser("init", help = "initialize a dumb git repo")
+
+argsp.add_argument("path",
+                   metavar="directory",
+                   nargs="?",
+                   default=".",
+                   help="Where to create the repository.")
+
+def cmd_init(args):
+    repo_create(args.path)
 
 class GitRepository:
      """ A git repo"""
@@ -59,6 +71,8 @@ class GitRepository:
 def main(argv=sys.argv[1:]):
      args = argparser.parse_args(argv)
      match args.command:
+          case "init":
+               cmd_init(args)
           case "add":
                cmd_add(args)
           case "cat-file":
@@ -131,7 +145,27 @@ def repo_default_config():
     ret.set("core", "bare", "false")
 
     return ret
-   
+def repo_find(path=".", required=True):
+    path = os.path.realpath(path)
+
+    if os.path.isdir(os.path.join(path, ".git")):
+        return GitRepository(path)
+
+    # If we haven't returned, recurse in parent, if w
+    parent = os.path.realpath(os.path.join(path, ".."))
+
+    if parent == path:
+        # Bottom case
+        # os.path.join("/", "..") == "/":
+        # If parent==path, then path is root.
+        if required:
+            raise Exception("No git directory.")
+        else:
+            return None
+
+    # Recursive case
+    return repo_find(parent, required)
+
 def repo_create(path: Path) -> None:
      repo = GitRepository(path, True)
 
@@ -145,12 +179,12 @@ def repo_create(path: Path) -> None:
      
      assert repo_dir(repo, "branches", mkdir=True)
      assert repo_dir(repo, "objects", mkdir=True)
-     assert repo_dir(repo, "refs", "tags", mkidr=True)
+     assert repo_dir(repo, "refs", "tags", mkdir=True)
      assert repo_dir(repo, "refs", "heads", mkdir=True)
 
 
      with open(repo_file(repo, "description"), "w") as f:
-          f.write("Unnamed repository: edit this file description")
+          f.write("Unnamed repository: edit this file description \n")
 
      with open(repo_file(repo, "HEAD"), "w") as f:
           f.write("ref: refs/heads/master \n")
