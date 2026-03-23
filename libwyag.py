@@ -15,23 +15,6 @@ import os
 import re
 import sys
 import zlib
-
-argparser = argparse.ArgumentParser(description="very dumb git")
-argsubparsers = argparser.add_subparsers(title="Commands", dest="command")
-
-argsubparsers.required = True
-
-argsp = argsubparsers.add_parser("init", help = "initialize a dumb git repo")
-
-argsp.add_argument("path",
-                   metavar="directory",
-                   nargs="?",
-                   default=".",
-                   help="Where to create the repository.")
-
-def cmd_init(args):
-    repo_create(args.path)
-
 class GitRepository:
      """ A git repo"""
 
@@ -78,6 +61,103 @@ class GitObject(ABC):
      def deserialize(self, data: bytes) -> None:
           """CONVERT To python object from bytes"""
           pass
+
+class GitBlob(GitObject):
+     fmt = b'blob'
+     def init(self):
+          return super().init()
+
+     def serialize(self):
+          return self.blobdata
+     def deserialize(self, data):
+          self.blobdata = data
+
+
+argparser = argparse.ArgumentParser(description="very dumb git")
+argsubparsers = argparser.add_subparsers(title="Commands", dest="command")
+
+argsubparsers.required = True
+
+argsp = argsubparsers.add_parser("init", help = "initialize a dumb git repo")
+
+argsp.add_argument("path",
+                   metavar="directory",
+                   nargs="?",
+                   default=".",
+                   help="Where to create the repository.")
+
+catfilesp = argsubparsers.add_parser("cat-file", help="print out the uncompressed object")
+catfilesp.add_argument("type", 
+                       metavar="type",
+                       choices= ["blob", "tree", "tag", "commit"],
+                       help="Print the type of the object")
+catfilesp.add_argument("object",
+                       metavar="object", 
+                       help = "print out the object identifier")
+hashfilesp = argsubparsers.add_parser("hash-object", help="Compute the object ID and optionally crate a blob from a file")
+hashfilesp.add_argument("-t",
+                        metavar="type",
+                        choices=["blob", "tree", "tag", "commit"],
+                        help="Print the type of the object")
+hashfilesp.add_argument("-w",
+                        dest="write",
+                        action="store_true",
+                        help="Write the hash obejct into the database")
+hashfilesp.add_argument("path", 
+                        metavar="path",
+                        nargs="?",
+                        help="Read object from <file>")
+
+
+def object_hash(fd, fmt, repo=None):
+    """Compute object ID and optionally create a blob from a file."""
+    data = fd.read()
+
+    # Choose correct object type
+    match fmt:
+        case b'commit': obj=GitCommit(data)
+        case b'tree': obj=GitTree(data)
+        case b'tag': obj=GitTag(data)
+        case b'blob': obj=GitBlob(data)
+        case _: raise Exception(f"Unknown type {fmt}!")
+
+    return write_object(obj, repo)
+
+
+def cmd_hash_object(args):
+     if args.write:
+          repo = repo_find()
+     else:
+          repo = None
+          
+     if args.path:
+          with open(args.path, "rb") as fd:
+               sha = object_hash(fd, args.type.encode(), repo)
+               print(sha)
+     else:
+          # Read raw bytes from stdin
+          sha = object_hash(sys.stdin.buffer, args.type.encode(), repo)
+          print(sha)
+
+
+
+
+def cmd_init(args):
+    repo_create(args.path)
+def cmd_cat_file(args):
+     repo = repo_find()
+     cat_file(repo, args.object, fmt=args.type.encode())
+
+def cat_file(repo: GitRepository, obj: GitObject, fmt=None):
+     obj = read_object(repo, object_find(repo, obj, fmt=fmt))
+
+def object_find(repo, name, fmt=None, follow=True):
+     dir = name[0:2]
+     return dir
+
+
+
+
 
 
 
