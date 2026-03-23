@@ -3,6 +3,7 @@ import configparser
 from datetime import datetime
 from typing import TextIO
 from pathlib import Path
+from abc import ABC, abstractmethod
 try:
     import grp, pwd
 except ModuleNotFoundError:
@@ -55,15 +56,74 @@ class GitRepository:
                if vers != 0:
                     raise Exception(f"Unsupported repository version.")
                
+class GitObject(ABC):
+     """Base class for all objects"""
+     def __init__(self, data: bytes | None):
+          if not self.data:
+               self.init()
+          else:
+               self.deserialize()
+          
+     @abstractmethod
+     def init(self) -> None:
+          """Initialize a new empty object."""
+          pass
+
+     @abstractmethod
+     def serialize(self) -> None:
+          """Convert to bytes"""
+          pass
+
+     @abstractmethod
+     def deserialize(self, data: bytes) -> None:
+          """CONVERT To python object from bytes"""
+          pass
 
 
 
+def read_object(repo: GitRepository, hash: bytes) -> GitObject:
+     """return git object that represents the type, either commit etc"""
+     
+     path = repo_file(repo, "objects", hash[:2], hash[2:])
+     
+     if not os.path.exists(path):
+          return None
+     if not os.path.isdir(path):
+          return None
+     with open(path, "rb") as f:
+          raw = zlib.decompress(f.read())
 
+          x = raw.find(b' ')
+          fmt = raw[:x]
 
-
+          y = raw.find(b'x\00')
+          size = int(raw[x:y].decode('ascii'))
+          if size != len(raw) -y -1:
+               raise Exception(f"Malformed object: {hash}. Bad length")
+          match fmt:
+               case b'commit': c=GitCommit
+               case b'tree': c=GitTree
+               case b'blob': c=GitBlob
+               case b'tag': c=GitTag
+               case _:
+                    raise Exception(f"Unknown type {fmt.decode('ascii')} for object {hash}")
+     return c(raw[y+1:])
      
 
 
+def write_object(object: GitObject, repo=None):
+     data = object.serialize()
+     result = object.fmt + b' ' + str(len(data)).encode() + b'\x00' + data
+
+     #compute hash
+     hash = hashlib.sha1(result).hexdigest()
+
+     if repo:
+          path = repo_file(repo, "objects", hash[:2], hash[2:], mkdir=True)
+          if not os.path.exists(path):
+               with open(path, "rb") as f:
+                    f.write(zlib.compress(result))
+     return hash
 
 
 
