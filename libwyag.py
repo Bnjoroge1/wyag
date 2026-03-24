@@ -41,11 +41,11 @@ class GitRepository:
                
 class GitObject(ABC):
      """Base class for all objects"""
-     def __init__(self, data: bytes | None):
-          if not self.data:
+     def __init__(self, data: bytes | None = None):
+          if data is None:
                self.init()
           else:
-               self.deserialize()
+               self.deserialize(data)
           
      @abstractmethod
      def init(self) -> None:
@@ -161,14 +161,14 @@ def object_find(repo, name, fmt=None, follow=True):
 
 
 
-def read_object(repo: GitRepository, hash: bytes) -> GitObject:
+def read_object(repo: GitRepository, hash: str) -> GitObject:
      """return git object that represents the type, either commit etc"""
      
      path = repo_file(repo, "objects", hash[:2], hash[2:])
      
-     if not os.path.exists(path):
+     if not path or not os.path.exists(path):
           return None
-     if not os.path.isdir(path):
+     if not os.path.isfile(path):
           return None
      with open(path, "rb") as f:
           raw = zlib.decompress(f.read())
@@ -176,8 +176,8 @@ def read_object(repo: GitRepository, hash: bytes) -> GitObject:
           x = raw.find(b' ')
           fmt = raw[:x]
 
-          y = raw.find(b'x\00')
-          size = int(raw[x:y].decode('ascii'))
+          y = raw.find(b'\x00', x)
+          size = int(raw[x+1:y].decode('ascii'))
           if size != len(raw) -y -1:
                raise Exception(f"Malformed object: {hash}. Bad length")
           match fmt:
@@ -201,7 +201,7 @@ def write_object(object: GitObject, repo=None):
      if repo:
           path = repo_file(repo, "objects", hash[:2], hash[2:], mkdir=True)
           if not os.path.exists(path):
-               with open(path, "rb") as f:
+               with open(path, "wb") as f:
                     f.write(zlib.compress(result))
      return hash
 

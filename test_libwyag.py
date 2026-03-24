@@ -1,6 +1,7 @@
 import os
+import zlib
 import pytest
-from libwyag import GitRepository, repo_path, repo_dir, repo_file
+from libwyag import GitRepository, repo_path, repo_dir, repo_file, write_object, read_object, GitBlob
 
 @pytest.fixture
 def repo(tmp_path):
@@ -81,3 +82,52 @@ def test_repo_file_no_mkdir_missing_dir(repo):
     # repo_file should also return None implicitly
     result = repo_file(repo, "missing", "dir", "file")
     assert result is None
+
+
+def test_write_object_no_repo():
+    """Test that write_object calculates the correct hash and serializes data without a repo"""
+    data = b"hello world"
+    blob = GitBlob(data)
+    
+    # Expected format: b'blob 11\x00hello world'
+    # Hash is SHA1 of the above
+    import hashlib
+    expected_hash = hashlib.sha1(b"blob 11\x00hello world").hexdigest()
+    
+    # We pass repo=None so it doesn't write to disk
+    result_hash = write_object(blob, repo=None)
+    
+    assert result_hash == expected_hash
+
+def test_write_read_object_with_repo(repo):
+    """Test writing an object to the repository and reading it back"""
+    data = b"test repository data"
+    blob = GitBlob(data)
+    
+    # Write to repository
+    obj_hash = write_object(blob, repo)
+    
+    # Directly verify the file was written to the correct location
+    obj_dir = obj_hash[:2]
+    obj_file = obj_hash[2:]
+    expected_path = os.path.join(repo.gitdir, "objects", obj_dir, obj_file)
+    
+    assert os.path.exists(expected_path)
+    
+    # Verify the contents are compressed
+    with open(expected_path, "rb") as f:
+        compressed_data = f.read()
+        raw_data = zlib.decompress(compressed_data)
+        assert raw_data == b"blob 20\x00test repository data"
+        
+    # Test reading the object back using read_object
+    read_obj = read_object(repo, obj_hash)
+    
+    assert isinstance(read_obj, GitBlob)
+    assert read_obj.serialize() == data
+
+def test_read_nonexistent_object(repo):
+    """Test read_object handles missing objects correctly"""
+    result = read_object(repo, "0000000000000000000000000000000000000000")
+    assert result is None
+
