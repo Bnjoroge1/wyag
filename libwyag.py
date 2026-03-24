@@ -72,6 +72,19 @@ class GitBlob(GitObject):
      def deserialize(self, data):
           self.blobdata = data
 
+class GitCommit(GitObject):
+     fmt = b'commit'
+     def init(self):
+          super().init()
+          self.kvlm = dict()
+
+     def serialize(self):
+          #convert python dict to git commit format
+          return kvlm_serialize(self.kvlm)
+     
+     def deserialize(self, data):
+          self.kvlm = kvlm_parse(data)
+
 
 argparser = argparse.ArgumentParser(description="very dumb git")
 argsubparsers = argparser.add_subparsers(title="Commands", dest="command")
@@ -212,6 +225,7 @@ def kvlm_parse(raw, start=0, dct=None):
         dct[key]=value
 
     return kvlm_parse(raw, start=end+1, dct=dct)
+
 def kvlm_serialize(kvlm):
     ret = b''
 
