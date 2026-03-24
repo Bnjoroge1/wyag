@@ -107,9 +107,12 @@ catfilesp.add_argument("type",
 catfilesp.add_argument("object",
                        metavar="object", 
                        help = "print out the object identifier")
+
 hashfilesp = argsubparsers.add_parser("hash-object", help="Compute the object ID and optionally crate a blob from a file")
 hashfilesp.add_argument("-t",
                         metavar="type",
+                        dest="type",
+                        default="blob",
                         choices=["blob", "tree", "tag", "commit"],
                         help="Print the type of the object")
 hashfilesp.add_argument("-w",
@@ -121,6 +124,55 @@ hashfilesp.add_argument("path",
                         nargs="?",
                         help="Read object from <file>")
 
+argsp = argsubparsers.add_parser("log", help="Display history of a given commit.")
+argsp.add_argument("commit",
+                   default="HEAD",
+                   nargs="?",
+                   help="Commit to start at.")
+def cmd_log(args):
+    repo = repo_find()
+
+    print("digraph wyaglog{")
+    print("  node[shape=rect]")
+    log_graphviz(repo, object_find(repo, args.commit), set())
+    print("}")
+
+def log_graphviz(repo, sha, seen):
+
+    if sha in seen:
+        return
+    seen.add(sha)
+
+    commit = read_object(repo, sha)
+    if not commit:
+         print("please provide a commit hash")
+         return
+    if not isinstance(commit, GitCommit):
+         print(f"You did not pass a valid gitcommit {commit.deserialize(commit)}")
+         return
+    message = commit.kvlm[None].decode("utf8").strip()
+    message = message.replace("\\", "\\\\")
+    message = message.replace("\"", "\\\"")
+
+    if "\n" in message: # Keep only the first line
+        message = message[:message.index("\n")]
+
+    print(f"  c_{sha} [label=\"{sha[0:7]}: {message}\"]")
+    assert commit.fmt==b'commit'
+
+    if not b'parent' in commit.kvlm.keys():
+        # Base case: the initial commit.
+        return
+
+    parents = commit.kvlm[b'parent']
+
+    if type(parents) != list:
+        parents = [ parents ]
+
+    for p in parents:
+        p = p.decode("ascii")
+        print (f"  c_{sha} -> c_{p};")
+        log_graphviz(repo, p, seen)
 
 def object_hash(fd, fmt, repo=None):
     """Compute object ID and optionally create a blob from a file."""
@@ -165,8 +217,11 @@ def cat_file(repo: GitRepository, obj: GitObject, fmt=None):
      obj = read_object(repo, object_find(repo, obj, fmt=fmt))
 
 def object_find(repo, name, fmt=None, follow=True):
-     dir = name[0:2]
-     return dir
+    """Find the full SHA-1 hash for a given object name."""
+    
+    # For now, we are skipping tag resolution/branch names and just
+    # handling direct SHA-1 hashes (the simplest case to start testing).
+    return name
 
 
 

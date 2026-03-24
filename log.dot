@@ -1,0 +1,20 @@
+digraph wyaglog{
+  node[shape=rect]
+  c_884100c691e33c89d5c82ae1466100610cde14c3 [label="884100c: serialize kvlm"]
+  c_884100c691e33c89d5c82ae1466100610cde14c3 -> c_964b23d7b7f498c947175d79bd4921ed95864f6a;
+  c_964b23d7b7f498c947175d79bd4921ed95864f6a [label="964b23d: adding kvlm parse"]
+  c_964b23d7b7f498c947175d79bd4921ed95864f6a -> c_9ed540b7600618186023a5237c78596ae85b676b;
+  c_9ed540b7600618186023a5237c78596ae85b676b [label="9ed540b: add tests for read and write object and fixed issues"]
+  c_9ed540b7600618186023a5237c78596ae85b676b -> c_10bf68c6f6ab86932c5e09577dd01c8c835fddd4;
+  c_10bf68c6f6ab86932c5e09577dd01c8c835fddd4 [label="10bf68c: support for git hash object, its args, and cat-file"]
+  c_10bf68c6f6ab86932c5e09577dd01c8c835fddd4 -> c_1b490065d6efd22af57e0cfd7da74e2b8826015d;
+  c_1b490065d6efd22af57e0cfd7da74e2b8826015d [label="1b49006: adding read and write object"]
+  c_1b490065d6efd22af57e0cfd7da74e2b8826015d -> c_226554db16f2a385498920a2a5dec7127fb7ff99;
+  c_226554db16f2a385498920a2a5dec7127fb7ff99 [label="226554d: adding tests and finding root repo"]
+  c_226554db16f2a385498920a2a5dec7127fb7ff99 -> c_d5a7fbdf1e2004b108f11176630e0e10a9b0d57b;
+  c_d5a7fbdf1e2004b108f11176630e0e10a9b0d57b [label="d5a7fbd: adding repo crate and config parsing"]
+  c_d5a7fbdf1e2004b108f11176630e0e10a9b0d57b -> c_4a98e7f3d02ac518580e7407a6172430af7caea7;
+  c_4a98e7f3d02ac518580e7407a6172430af7caea7 [label="4a98e7f: added repo path, file and dir"]
+  c_4a98e7f3d02ac518580e7407a6172430af7caea7 -> c_f1398ccac89e247f35db666f062d0bb7ed8802bc;
+  c_f1398ccac89e247f35db666f062d0bb7ed8802bc [label="f1398cc: adding main class def and utility fns"]
+}
