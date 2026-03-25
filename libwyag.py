@@ -27,10 +27,15 @@ class GitRepository:
           if not (force or os.path.isdir(self.gitdir)):
                raise Exception(f"Not a gip repo: {self.gitdir}")
           
+          
           self.conf: configparser.ConfigParser = configparser.ConfigParser()
+         
           cf:Path = repo_file(self, "config")
           if cf and os.path.exists(cf):
-               self.conf.read([cf])
+               try:
+                    self.conf.read([cf])
+               except Exception as e:
+                    print(f"Error while trying to read the config file: {e}")
           elif not force:
                raise Exception("config file missing")
           
