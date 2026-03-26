@@ -398,7 +398,7 @@ def cmd_checkout(args):
 
 def tree_checkout(repo, tree, path):
     for item in tree.items:
-        obj = read_object(repo, item.sha)
+        obj = read_object(repo, item.hash)
         dest = os.path.join(path, item.path)
 
         if obj.fmt == b'tree':
