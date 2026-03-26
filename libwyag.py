@@ -252,6 +252,13 @@ argsp.add_argument("-r",
 
 argsp.add_argument("tree",
                    help="A tree-ish object.")
+argsp = argsubparsers.add_parser("checkout", help="Checkout a commit inside of a directory.")
+
+argsp.add_argument("commit",
+                   help="The commit or tree to checkout.")
+
+argsp.add_argument("path",
+                   help="The EMPTY directory to checkout on.")
 
 def cmd_log(args):
     repo = repo_find()
@@ -333,6 +340,7 @@ def cmd_hash_object(args):
 
 def cmd_init(args):
     repo_create(args.path)
+
 def cmd_cat_file(args):
      repo = repo_find()
      cat_file(repo, args.object, fmt=args.type.encode())
@@ -348,7 +356,58 @@ def object_find(repo, name, fmt=None, follow=True):
     return name
 
 
+def cmd_checkout(args):
+    repo = repo_find()
 
+    obj = read_object(repo, object_find(repo, args.commit))
+
+    # If the object is a commit, we grab its tree
+    if obj.fmt == b'commit':
+        obj = read_object(repo, obj.kvlm[b'tree'].decode("ascii"))
+
+    # Verify that path is an empty directory
+    if os.path.exists(args.path):
+        if not os.path.isdir(args.path):
+            raise Exception(f"Not a directory {args.path}!")
+        if os.listdir(args.path):
+            raise Exception(f"Not empty {args.path}!")
+    else:
+        os.makedirs(args.path)
+
+    tree_checkout(repo, obj, os.path.realpath(args.path))
+
+def cmd_checkout(args):
+    repo = repo_find()
+
+    obj = read_object(repo, object_find(repo, args.commit))
+
+    # If the object is a commit, we grab its tree
+    if obj.fmt == b'commit':
+        obj = read_object(repo, obj.kvlm[b'tree'].decode("ascii"))
+
+    # Verify that path is an empty directory
+    if os.path.exists(args.path):
+        if not os.path.isdir(args.path):
+            raise Exception(f"Not a directory {args.path}!")
+        if os.listdir(args.path):
+            raise Exception(f"Not empty {args.path}!")
+    else:
+        os.makedirs(args.path)
+
+    tree_checkout(repo, obj, os.path.realpath(args.path))
+
+def tree_checkout(repo, tree, path):
+    for item in tree.items:
+        obj = read_object(repo, item.sha)
+        dest = os.path.join(path, item.path)
+
+        if obj.fmt == b'tree':
+            os.mkdir(dest)
+            tree_checkout(repo, obj, dest)
+        elif obj.fmt == b'blob':
+            # @TODO Support symlinks (identified by mode 12****)
+            with open(dest, 'wb') as f:
+                f.write(obj.blobdata)
 
 def kvlm_parse(raw, start=0, dct=None):
     if not dct:
