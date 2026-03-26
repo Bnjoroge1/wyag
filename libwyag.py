@@ -15,6 +15,8 @@ import os
 import re
 import sys
 import zlib
+
+
 class GitRepository:
      """ A git repo"""
 
@@ -28,7 +30,15 @@ class GitRepository:
                raise Exception(f"Not a gip repo: {self.gitdir}")
           
           
-          self.conf: configparser.ConfigParser = configparser.ConfigParser()
+          # Git config allows duplicate keys; Python's configparser defaults to
+          # strict parsing and raises DuplicateOptionError. We mimic git's
+          # behavior by allowing duplicates (last value wins) and disabling
+          # interpolation.
+          self.conf: configparser.ConfigParser = configparser.ConfigParser(
+               interpolation=None,
+               strict=False,
+               allow_no_value=True,
+          )
          
           cf:Path = repo_file(self, "config")
           if cf and os.path.exists(cf):
@@ -123,6 +133,36 @@ def tree_serialize(obj):
         ret += sha.to_bytes(20, byteorder="big")
     return ret
 
+
+
+def cmd_ls_tree(args):
+    repo = repo_find()
+    ls_tree(repo, args.tree, args.recursive)
+
+def ls_tree(repo, ref, recursive=None, prefix=""):
+    sha = object_find(repo, ref, fmt=b"tree")
+    obj = read_object(repo, sha)
+    if not isinstance(obj, GitTree):
+         return
+    
+    for item in obj.items:
+        if len(item.mode) == 5:
+            type = item.mode[0:1]
+        else:
+            type = item.mode[0:2]
+
+        match type: # Determine the type.
+            case b'04': type = "tree"
+            case b'10': type = "blob" # A regular file.
+            case b'12': type = "blob" # A symlink. Blob contents is link target.
+            case b'16': type = "commit" # A submodule
+            case _: raise Exception(f"Weird tree leaf mode {item.mode}")
+
+        if not (recursive and type=='tree'): # This is a leaf
+            print(f"{'0' * (6 - len(item.mode)) + item.mode.decode('ascii')} {type} {item.sha}\t{os.path.join(prefix, item.path)}")
+        else: # This is a branch, recurse
+            ls_tree(repo, item.sha, recursive, os.path.join(prefix, item.path))
+
 class GitTree(GitObject):
     fmt=b'tree'
 
@@ -204,6 +244,15 @@ argsp.add_argument("commit",
                    default="HEAD",
                    nargs="?",
                    help="Commit to start at.")
+argsp = argsubparsers.add_parser("ls-tree", help="Pretty-print a tree object.")
+argsp.add_argument("-r",
+                   dest="recursive",
+                   action="store_true",
+                   help="Recurse into sub-trees")
+
+argsp.add_argument("tree",
+                   help="A tree-ish object.")
+
 def cmd_log(args):
     repo = repo_find()
 
@@ -445,8 +494,8 @@ def main(argv=sys.argv[1:]):
                cmd_log(args)
           case "ls-files":
                cmd_ls_files(args)
-          case "ls-trees":
-               cmd_ls_trees(args)
+          case "ls-tree":
+               cmd_ls_tree(args)
           case "rev-parse":
                cmd_rev_parse(args)
           case "rm":
@@ -493,14 +542,14 @@ def repo_dir(repo: GitRepository, *path: list, mkdir: bool =False) -> Path | Non
      else:
           return None
 def repo_default_config():
-    ret = configparser.ConfigParser()
+     ret = configparser.ConfigParser(interpolation=None, strict=False, allow_no_value=True)
 
-    ret.add_section("core")
-    ret.set("core", "repositoryformatversion", "0")
-    ret.set("core", "filemode", "false")
-    ret.set("core", "bare", "false")
+     ret.add_section("core")
+     ret.set("core", "repositoryformatversion", "0")
+     ret.set("core", "filemode", "false")
+     ret.set("core", "bare", "false")
 
-    return ret
+     return ret
 def repo_find(path=".", required=True):
     path = os.path.realpath(path)
 
