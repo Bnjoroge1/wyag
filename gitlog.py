@@ -31,10 +31,10 @@ def log_graphviz(repo, sha, seen):
 
         parents = commit.kvlm[b"parent"]
 
-    if not isinstance(parents, list):
-        parents = [parents]
-
-    for p in parents:
-        p = p.decode("ascii")
-        print(f"  c_{sha} -> c_{p};")
-        log_graphviz(repo, p, seen)
+        if not isinstance(parents, list):
+            parents = [parents]
+    
+        for p in parents:
+            p = p.decode("ascii")
+            print(f"  c_{sha} -> c_{p};")
+            log_graphviz(repo, p, seen)

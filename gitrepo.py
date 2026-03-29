@@ -1,7 +1,7 @@
 import configparser
 import os
 import zlib
-from pathlib import Path
+
 import hashlib
 
 from gitcommit import GitCommit
@@ -31,7 +31,7 @@ class GitRepository:
             allow_no_value=True,
         )
 
-        cf: Path | None = repo_file(self, "config")
+        cf: str | None = repo_file(self, "config")
         if cf and os.path.exists(cf):
             try:
                 self.conf.read([cf])
@@ -92,17 +92,18 @@ def write_object(object: GitObject, repo=None):
         from gitrepo import repo_file
 
         path = repo_file(repo, "objects", hash[:2], hash[2:], mkdir=True)
-        if not os.path.exists(path):
+        if not path:
+            return
             with open(path, "wb") as f:
                 f.write(zlib.compress(result))
     return hash
 
-def repo_path(repo: GitRepository, *path: list) -> Path:
+def repo_path(repo: GitRepository, *path: str) -> str:
     """compute path under repo's gitdir"""
     return os.path.join(repo.gitdir, *path)
 
 
-def repo_file(repo: GitRepository, *path, mkdir: bool = False) -> Path | None:
+def repo_file(repo: GitRepository, *path, mkdir: bool = False) -> str | None:
     """same as repo_path but create_dirname(*path) if asbsent.
          For
          example, repo_file(r, \"refs\", \"remotes\", \"origin\", \"HEAD\") will create
@@ -114,7 +115,7 @@ def repo_file(repo: GitRepository, *path, mkdir: bool = False) -> Path | None:
 
 def repo_dir(
     repo: GitRepository, *path, mkdir: bool = False
-) -> Path | None | Exception:
+) -> str | None | Exception:
     """same as repo path but mkdir *path if absent if mkdir"""
     path = repo_path(repo, *path)
 
@@ -180,14 +181,26 @@ def repo_create(path: str) -> GitRepository | None:
     assert repo_dir(repo, "objects", mkdir=True)
     assert repo_dir(repo, "refs", "tags", mkdir=True)
     assert repo_dir(repo, "refs", "heads", mkdir=True)
-
-    with open(repo_file(repo, "description"), "w") as f:
+    
+    repo_f = repo_file(repo, "description")
+    if not repo_f:
+        return
+    with open(repo_f, "w") as f:
         f.write("Unnamed repository: edit this file description \n")
-
-    with open(repo_file(repo, "HEAD"), "w") as f:
+        
+    head_p = repo_file(repo, "HEAD")
+    
+    if not head_p:
+        return
+        
+    with open(head_p, "w") as f:
         f.write("ref: refs/heads/master \n")
-
-    with open(repo_file(repo, "config"), "w") as f:
+    
+    conf_p = repo_file(repo, "config")
+    if not conf_p:
+        return
+        
+    with open(conf_p, "w") as f:
         config = repo_default_config()
         config.write(f)
 

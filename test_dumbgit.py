@@ -108,7 +108,9 @@ def test_write_read_object_with_repo(repo):
 
     # Write to repository
     obj_hash = write_object(blob, repo)
-
+    if not obj_hash:
+        assert False
+        
     # Directly verify the file was written to the correct location
     obj_dir = obj_hash[:2]
     obj_file = obj_hash[2:]
