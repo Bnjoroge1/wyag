@@ -15,10 +15,10 @@ import re
 import sys
 import zlib
 
-from gitrepo import GitRepository, repo_find, repo_create, read_object
-from gitobject import object_find, write_object, GitObject
+from gitrepo import GitRepository, repo_find, repo_create, read_object, write_object
+from gitobject import object_find
 from gitcommit import GitCommit
-from gittree import GitTree, GitTreeLeaf, GitBlob, tree_checkout, tree_parse, tree_serialize
+from gittree import GitTree, GitBlob, tree_checkout
 from gitlog import log_graphviz
 
 
@@ -29,6 +29,8 @@ def cmd_ls_tree(args):
 
 def ls_tree(repo, ref, recursive=None, prefix=""):
     sha = object_find(repo, ref, fmt=b"tree")
+    if not sha:
+        return
     obj = read_object(repo, sha)
     if not isinstance(obj, GitTree):
          return
@@ -128,11 +130,16 @@ def object_hash(fd, fmt, repo=None):
 
     # Choose correct object type
     match fmt:
-        case b'commit': obj=GitCommit(data)
-        case b'tree': obj=GitTree(data)
-        case b'tag': obj=GitTag(data)
-        case b'blob': obj=GitBlob(data)
-        case _: raise Exception(f"Unknown type {fmt}!")
+        case b'commit':
+            obj=GitCommit(data)
+        case b'tree': 
+            obj=GitTree(data)
+        case b'tag': 
+            obj=GitTag(data)
+        case b'blob': 
+            obj=GitBlob(data)
+        case _: 
+            raise Exception(f"Unknown type {fmt}!")
 
     return write_object(obj, repo)
 

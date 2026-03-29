@@ -1,9 +1,9 @@
-import hashlib
 import os
-import zlib
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
-from gitrepo import GitRepository
+if TYPE_CHECKING:
+    from gitrepo import GitRepository
 
 
 class GitObject(ABC):
@@ -32,7 +32,7 @@ class GitObject(ABC):
 
 
 def object_find(
-    repo: GitRepository, name: str, fmt=None, follow: bool = True
+    repo: "GitRepository", name: str, fmt=None, follow: bool = True
 ) -> str | None:
     """Find the full SHA-1 hash for a given object name."""
 
@@ -41,19 +41,3 @@ def object_find(
     return name
 
 
-def write_object(object: GitObject, repo=None):
-    data = object.serialize()
-    result = object.fmt + b" " + str(len(data)).encode() + b"\x00" + data
-
-    # compute hash
-    hash = hashlib.sha1(result).hexdigest()
-
-    if repo:
-        # Lazy import to avoid circular import between gitobject <-> gitrepo
-        from gitrepo import repo_file
-
-        path = repo_file(repo, "objects", hash[:2], hash[2:], mkdir=True)
-        if not os.path.exists(path):
-            with open(path, "wb") as f:
-                f.write(zlib.compress(result))
-    return hash

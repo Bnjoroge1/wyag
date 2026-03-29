@@ -2,6 +2,7 @@ import configparser
 import os
 import zlib
 from pathlib import Path
+import hashlib
 
 from gitcommit import GitCommit
 from gitobject import GitObject
@@ -79,6 +80,22 @@ def read_object(repo: GitRepository, hash: str) -> GitObject | None:
                 raise Exception(f"Unknown type {fmt.decode('ascii')} for object {hash}")
     return c(raw[y + 1 :])
 
+def write_object(object: GitObject, repo=None):
+    data = object.serialize()
+    result = object.fmt + b" " + str(len(data)).encode() + b"\x00" + data
+
+    # compute hash
+    hash = hashlib.sha1(result).hexdigest()
+
+    if repo:
+        # Lazy import to avoid circular import between gitobject <-> gitrepo
+        from gitrepo import repo_file
+
+        path = repo_file(repo, "objects", hash[:2], hash[2:], mkdir=True)
+        if not os.path.exists(path):
+            with open(path, "wb") as f:
+                f.write(zlib.compress(result))
+    return hash
 
 def repo_path(repo: GitRepository, *path: list) -> Path:
     """compute path under repo's gitdir"""
@@ -126,7 +143,7 @@ def repo_default_config():
     return ret
 
 
-def repo_find(path=".", required=True):
+def repo_find(path=".", required=True) -> GitRepository | None:
     path = os.path.realpath(path)
 
     if os.path.isdir(os.path.join(path, ".git")):
