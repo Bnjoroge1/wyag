@@ -1,21 +1,8 @@
 import argparse
-from abc import ABC, abstractmethod
-from datetime import datetime
-from pathlib import Path
-from typing import TextIO
 
-try:
-    import grp
-    import pwd
-except ModuleNotFoundError:
-    pass
-import hashlib
 import os
-import re
 import sys
-import zlib
-from fnmatch import fnmatch
-from math import ceil
+
 
 from gitcommit import GitCommit
 from gitlog import log_graphviz
@@ -35,6 +22,7 @@ def ls_tree(repo, ref, recursive=None, prefix=""):
         return
     obj = read_object(repo, sha)
     if not isinstance(obj, GitTree):
+        print(f" this object {obj} is not a tree")
         return
 
     for item in obj.items:
@@ -139,10 +127,16 @@ argsp.add_argument("path", help="The EMPTY directory to checkout on.")
 
 def cmd_log(args):
     repo = repo_find()
+    if not repo:
+        return
 
     print("digraph wyaglog{")
     print("  node[shape=rect]")
-    log_graphviz(repo, object_find(repo, args.commit), set())
+    
+    obj = object_find(repo, args.commit)
+    if not obj:
+        return
+    log_graphviz(repo, obj , set())
     print("}")
 
 
@@ -218,12 +212,19 @@ def cat_file(repo: GitRepository, obj_name: str, fmt=None):
 
 def cmd_checkout(args):
     repo = repo_find()
-
-    obj = read_object(repo, object_find(repo, args.commit))
+    if not repo:
+        return
+    obj_name= object_find(repo, args.commit)
+    if not obj_name:
+        return
+    obj = read_object(repo, obj_name)
+    if not obj:
+        return
 
     # If the object is a commit, we grab its tree
     if obj.fmt == b"commit":
-        obj = read_object(repo, obj.kvlm[b"tree"].decode("ascii"))
+        if isinstance(obj, GitCommit): 
+            obj = read_object(repo, obj.kvlm[b"tree"].decode("ascii"))
 
     # Verify that path is an empty directory
     if os.path.exists(args.path):

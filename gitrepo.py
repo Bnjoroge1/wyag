@@ -122,7 +122,7 @@ def repo_dir(
         if os.path.isdir(path):
             return path
         else:
-            return Exception("repo is not a directory")
+            return Exception(f"Not a directory: {path}")
     if mkdir:
         os.makedirs(path)
         return path

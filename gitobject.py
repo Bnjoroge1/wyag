@@ -1,4 +1,3 @@
-import os
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
@@ -8,6 +7,7 @@ if TYPE_CHECKING:
 
 class GitObject(ABC):
     """Base class for all objects"""
+    fmt: bytes
 
     def __init__(self, data: bytes | None = None):
         if data is None:

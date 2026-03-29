@@ -107,4 +107,5 @@ def tree_checkout(repo, tree, path):
         elif obj.fmt == b"blob":
             # @TODO Support symlinks (identified by mode 12****)
             with open(dest, "wb") as f:
-                f.write(obj.blobdata)
+                if isinstance(obj, GitBlob):
+                    f.write(obj.blobdata)

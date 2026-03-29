@@ -1,4 +1,5 @@
-from gitrepo import read_object
+from gitcommit import GitCommit
+
 
 def log_graphviz(repo, sha, seen):
 
@@ -13,25 +14,22 @@ def log_graphviz(repo, sha, seen):
     if not commit:
         print("please provide a commit hash")
         return
-    # Avoid circular imports: we don't type-check against GitCommit here.
-    if not hasattr(commit, "kvlm") or not hasattr(commit, "fmt"):
-        print("You did not pass a valid commit object")
-        return
-    message = commit.kvlm[None].decode("utf8").strip()
-    message = message.replace("\\", "\\\\")
-    message = message.replace('"', '\\"')
+    if isinstance(commit, GitCommit):
+        message = commit.kvlm[None].decode("utf8").strip()
+        message = message.replace("\\", "\\\\")
+        message = message.replace('"', '\\"')
 
-    if "\n" in message:  # Keep only the first line
-        message = message[: message.index("\n")]
+        if "\n" in message:  # Keep only the first line
+            message = message[: message.index("\n")]
 
-    print(f'  c_{sha} [label="{sha[0:7]}: {message}"]')
-    assert commit.fmt == b"commit"
+        print(f'  c_{sha} [label="{sha[0:7]}: {message}"]')
+        assert commit.fmt == b"commit"
+    
+        if  b"parent" not in commit.kvlm.keys():
+            # Base case: the initial commit.
+            return
 
-    if not b"parent" in commit.kvlm.keys():
-        # Base case: the initial commit.
-        return
-
-    parents = commit.kvlm[b"parent"]
+        parents = commit.kvlm[b"parent"]
 
     if not isinstance(parents, list):
         parents = [parents]
