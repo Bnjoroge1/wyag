@@ -9,8 +9,10 @@ from gitlog import log_graphviz
 from gitobject import object_find
 from gitrepo import GitRepository, read_object, repo_create, repo_find, write_object
 from gittree import GitBlob, GitTree, tree_checkout
+from gitrefs import list_refs
 
 
+            
 def cmd_ls_tree(args):
     repo = repo_find()
     ls_tree(repo, args.tree, args.recursive)
@@ -124,6 +126,23 @@ argsp.add_argument("commit", help="The commit or tree to checkout.")
 
 argsp.add_argument("path", help="The EMPTY directory to checkout on.")
 
+ref_sp = argsubparsers.add_parser("show-refs", help="List references.")
+
+def cmd_show_ref(args):
+    repo = repo_find()
+    refs = list_refs(repo)
+    show_ref(repo, refs, prefix="refs")
+
+def show_ref(repo, refs, with_hash=True, prefix=""):
+    if prefix:
+        prefix = prefix + '/'
+    for k, v in refs.items():
+        if isinstance(v, str) and with_hash:
+            print (f"{v} {prefix}{k}")
+        elif isinstance(v, str):
+            print (f"{prefix}{k}")
+        else:
+            show_ref(repo, v, with_hash=with_hash, prefix=f"{prefix}{k}")
 
 def cmd_log(args):
     repo = repo_find()
@@ -222,15 +241,16 @@ def cmd_checkout(args):
         return
 
     # If the object is a commit, we grab its tree
-    if obj.fmt == b"commit":
-        if isinstance(obj, GitCommit): 
-            obj = read_object(repo, obj.kvlm[b"tree"].decode("ascii"))
+    
+    if isinstance(obj, GitCommit): 
+        obj = read_object(repo, obj.kvlm[b"tree"].decode("ascii"))
 
     # Verify that path is an empty directory
     if os.path.exists(args.path):
         if not os.path.isdir(args.path):
             raise Exception(f"Not a directory {args.path}!")
         if os.listdir(args.path):
+            #Using empty dirs
             raise Exception(f"Not empty {args.path}!")
     else:
         os.makedirs(args.path)
