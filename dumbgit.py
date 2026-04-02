@@ -6,11 +6,11 @@ import sys
 
 from gitcommit import GitCommit
 from gitlog import log_graphviz
-from gitobject import object_find
+from gitrefs import object_find
 from gitrepo import GitRepository, read_object, repo_create, repo_find, write_object
 from gittree import GitBlob, GitTree, tree_checkout
 from gitrefs import list_refs
-
+from gittags import create_tag, GitTag
 
             
 def cmd_ls_tree(args):
@@ -128,7 +128,39 @@ argsp.add_argument("path", help="The EMPTY directory to checkout on.")
 
 ref_sp = argsubparsers.add_parser("show-refs", help="List references.")
 
-def cmd_show_ref(args):
+argsp = argsubparsers.add_parser(
+    "tag",
+    help="List and create tags")
+
+argsp.add_argument("-a",
+                   action="store_true",
+                   dest="create_tag_object",
+                   help="Whether to create a tag object")
+
+argsp.add_argument("name",
+                   nargs="?",
+                   help="The new tag's name")
+
+argsp.add_argument("object",
+                   default="HEAD",
+                   nargs="?",
+                   help="The object the new tag will point to")
+
+def cmd_tag(args):
+    repo = repo_find()
+    if not repo:
+        return
+
+    if args.name:
+        create_tag(repo,
+                   args.name,
+                   args.object,
+                   create_tag_object = args.create_tag_object)
+    else:
+        refs = list_refs(repo)
+        show_ref(repo, refs["tags"], with_hash=False)
+        
+def cmd_show_refs(args):
     repo = repo_find()
     refs = list_refs(repo)
     show_ref(repo, refs, prefix="refs")
@@ -285,8 +317,8 @@ def main(argv=sys.argv[1:]):
             cmd_rev_parse(args)
         case "rm":
             cmd_rm(args)
-        case "show-ref":
-            cmd_show_ref(args)
+        case "show-refs":
+            cmd_show_refs(args)
         case "status":
             cmd_status(args)
         case "tag":
