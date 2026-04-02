@@ -205,3 +205,4 @@ def repo_create(path: str) -> GitRepository | None:
         config.write(f)
 
     return repo
+

@@ -1,8 +1,8 @@
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from gitrepo import GitRepository
+from abc import ABC, abstractmethod
+
+
+
 
 
 class GitObject(ABC):
@@ -31,13 +31,6 @@ class GitObject(ABC):
         pass
 
 
-def object_find(
-    repo: "GitRepository", name: str, fmt=None, follow: bool = True
-) -> str | None:
-    """Find the full SHA-1 hash for a given object name."""
 
-    # For now, we are skipping tag resolution/branch names and just
-    # handling direct SHA-1 hashes (the simplest case to start testing).
-    return name
 
 
