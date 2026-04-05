@@ -14,6 +14,7 @@ from gittree import GitBlob, GitTree, tree_checkout
 from gitrefs import list_refs
 from gittags import create_tag, GitTag
 from gitindex import index_read
+from gitingore import check_ignore, gitignore_read
 
             
 def cmd_ls_tree(args):
@@ -164,7 +165,17 @@ argsp.add_argument("name",
                    help="The name to parse")
 argsp = argsubparsers.add_parser("ls-files", help = "List all the stage files")
 argsp.add_argument("--verbose", action="store_true", help="Show everything.")
+argsp = argsubparsers.add_parser("check-ignore", help = "Check path(s) against ignore rules.")
+argsp.add_argument("path", nargs="+", help="Paths to check")
 
+
+def cmd_check_ignore(args):
+    repo = repo_find()
+    rules = gitignore_read(repo)
+    for path in args.path:
+        if check_ignore(rules, path):
+            print(path)
+            
 def cmd_ls_files(args):
     repo = repo_find()
     index = index_read(repo)
@@ -351,7 +362,7 @@ def main(argv=sys.argv[1:]):
             cmd_add(args)
         case "cat-file":
             cmd_cat_file(args)
-        case "check-igore":
+        case "check-ignore":
             cmd_check_ignore(args)
         case "checkout":
             cmd_checkout(args)
