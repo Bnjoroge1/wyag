@@ -13,7 +13,7 @@ from gitrepo import GitRepository, read_object, repo_create, repo_find, write_ob
 from gittree import GitBlob, GitTree, tree_checkout
 from gitrefs import list_refs
 from gittags import create_tag, GitTag
-from gitindex import index_read
+from gitindex import index_read, rm
 from gitingore import check_ignore, gitignore_read
 from gitstatus import branch_get_active, tree_to_dict
 
@@ -169,7 +169,13 @@ argsp.add_argument("--verbose", action="store_true", help="Show everything.")
 argsp = argsubparsers.add_parser("check-ignore", help = "Check path(s) against ignore rules.")
 argsp.add_argument("path", nargs="+", help="Paths to check")
 argsp = argsubparsers.add_parser("status", help = "Show the working tree status.")
+argsp = argsubparsers.add_parser("rm", help="Remove files from the working tree and the index.")
+argsp.add_argument("path", nargs="+", help="Files to remove")
 
+def cmd_rm(args):
+    repo = repo_find()
+    rm(repo, args.path)
+    
 def cmd_status(_):
     repo = repo_find()
     index = index_read(repo)
