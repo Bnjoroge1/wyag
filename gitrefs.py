@@ -1,4 +1,4 @@
-from gitrepo import repo_file, repo_dir
+from gitrepo import repo_file, repo_dir, read_object
 import os
 import re
 

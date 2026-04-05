@@ -2,7 +2,9 @@ import argparse
 
 import os
 import sys
-
+import pwd
+from datetime import datetime
+import grp
 
 from gitcommit import GitCommit
 from gitlog import log_graphviz
@@ -11,6 +13,7 @@ from gitrepo import GitRepository, read_object, repo_create, repo_find, write_ob
 from gittree import GitBlob, GitTree, tree_checkout
 from gitrefs import list_refs
 from gittags import create_tag, GitTag
+from gitindex import index_read
 
             
 def cmd_ls_tree(args):
@@ -159,7 +162,32 @@ argsp.add_argument("--dumbgit-type",
 
 argsp.add_argument("name",
                    help="The name to parse")
+argsp = argsubparsers.add_parser("ls-files", help = "List all the stage files")
+argsp.add_argument("--verbose", action="store_true", help="Show everything.")
 
+def cmd_ls_files(args):
+    repo = repo_find()
+    index = index_read(repo)
+    if args.verbose:
+        print(f"Index file format v{index.version}, containing {len(index.entries)} entries.")
+
+    for e in index.entries:
+        print(e.name)
+        if args.verbose:
+            entry_type = { 0b1000: "regular file",
+                           0b1010: "symlink",
+                           0b1110: "git link" }[e.mode_type]
+            print(f"  {entry_type} with perms: {e.mode_perms:o}")
+            print(f"  on blob: {e.sha}")
+            print(f"  created: {datetime.fromtimestamp(e.ctime[0])}.{e.ctime[1]}, modified: {datetime.fromtimestamp(e.mtime[0])}.{e.mtime[1]}")
+            print(f"  device: {e.dev}, inode: {e.ino}")
+            try:
+                print(f"  user: {pwd.getpwuid(e.uid).pw_name} ({e.uid})  group: {grp.getgrgid(e.gid).gr_name} ({e.gid})")
+            except NameError:
+                # These modules are not available on Windows, so just use the less-nice info.
+                print(f"  user: {e.uid}  group: {e.gid}")
+            print(f"  flags: stage={e.flag_stage} assume_valid={e.flag_assume_valid}")
+            
 def cmd_rev_parse(args):
     if args.type:
         fmt = args.type.encode()
