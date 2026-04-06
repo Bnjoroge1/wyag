@@ -1,5 +1,6 @@
-from gitrepo import repo_file, read_object
+from gitrepo import repo_file
 from gitrefs import object_find
+from gitstore import read_object
 import os
 
 
@@ -36,5 +37,4 @@ def tree_to_dict(repo, ref, prefix=""):
         else:
             ret[full_path] = leaf.sha
     return ret
-
 

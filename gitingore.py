@@ -1,4 +1,4 @@
-from gitrepo import read_object
+from gitstore import read_object
 import os
 from gitindex import index_read
 from fnmatch import fnmatch

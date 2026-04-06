@@ -1,10 +1,12 @@
-from gitrepo import repo_file, repo_dir, read_object
+from gitrepo import repo_file, repo_dir
 import os
 import re
+from typing import List, Optional
 
+from gittags import GitTag
+from gitstore import read_object
 
-
-def resolve_ref(repo, ref) -> str | None:
+def resolve_ref(repo, ref) -> Optional[str]:
     path = repo_file(repo, ref)
     if not path:
         return None
@@ -40,7 +42,7 @@ def list_refs(repo, path=None):
     return ret
     
 
-def resolve_object(repo: 'GitRepository', name: str) -> list[str | None] | None:
+def resolve_object(repo: 'GitRepository', name: str) -> Optional[List[Optional[str]]]:
     """Resolve name to an object hash in repo.
 
     This function is aware of:
@@ -95,7 +97,7 @@ def resolve_object(repo: 'GitRepository', name: str) -> list[str | None] | None:
 
 def object_find(
     repo: "GitRepository", name: str, fmt=None, follow: bool = True
-) -> str | None:
+) -> Optional[str]:
     """Find the full SHA-1 hash for a given object name."""
 
     # For now, we are skipping tag resolution/branch names and just
@@ -107,7 +109,8 @@ def object_find(
         return None
 
     if len(sha) > 1:
-        raise Exception(f"Ambiguous reference {name}: Candidates are:\n - {'\n - '.join(sha)}.")
+        candidates = "\n - ".join(filter(None, sha))
+        raise Exception(f"Ambiguous reference {name}: Candidates are:\n - {candidates}.")
 
     sha = sha[0]
     if not sha:

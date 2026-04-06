@@ -1,13 +1,6 @@
 import configparser
 import os
-import zlib
-
-import hashlib
-
-from gitcommit import GitCommit
-from gitobject import GitObject
-from gittree import GitBlob, GitTree
-
+from typing import Optional, Union
 
 class GitRepository:
     """A git repo"""
@@ -31,7 +24,7 @@ class GitRepository:
             allow_no_value=True,
         )
 
-        cf: str | None = repo_file(self, "config")
+        cf: Optional[str] = repo_file(self, "config")
         if cf and os.path.exists(cf):
             try:
                 self.conf.read([cf])
@@ -47,63 +40,14 @@ class GitRepository:
                 raise Exception("Unsupported repository version.")
 
 
-def read_object(repo: GitRepository, hash: str) -> GitObject | None:
-    """return git object that represents the type, either commit etc"""
 
-    path = repo_file(repo, "objects", hash[:2], hash[2:])
-    if not hash:
-        return None
-    if not path or not os.path.exists(path):
-        return None
-    if not os.path.isfile(path):
-        return None
-    with open(path, "rb") as f:
-        raw = zlib.decompress(f.read())
-
-        x = raw.find(b" ")
-        fmt = raw[:x]
-
-        y = raw.find(b"\x00", x)
-        size = int(raw[x + 1 : y].decode("ascii"))
-        if size != len(raw) - y - 1:
-            raise Exception(f"Malformed object: {hash}. Bad length")
-        match fmt:
-            case b"commit":
-                c = GitCommit
-            case b"tree":
-                c = GitTree
-            case b"blob":
-                c = GitBlob
-            case b"tag":
-                raise Exception("Tag objects are not implemented yet")
-            case _:
-                raise Exception(f"Unknown type {fmt.decode('ascii')} for object {hash}")
-    return c(raw[y + 1 :])
-
-def write_object(object: GitObject, repo=None):
-    data = object.serialize()
-    result = object.fmt + b" " + str(len(data)).encode() + b"\x00" + data
-
-    # compute hash
-    hash = hashlib.sha1(result).hexdigest()
-
-    if repo:
-        # Lazy import to avoid circular import between gitobject <-> gitrepo
-        from gitrepo import repo_file
-
-        path = repo_file(repo, "objects", hash[:2], hash[2:], mkdir=True)
-        if not path:
-            return
-            with open(path, "wb") as f:
-                f.write(zlib.compress(result))
-    return hash
 
 def repo_path(repo: GitRepository, *path: str) -> str:
     """compute path under repo's gitdir"""
     return os.path.join(repo.gitdir, *path)
 
 
-def repo_file(repo: GitRepository, *path, mkdir: bool = False) -> str | None:
+def repo_file(repo: GitRepository, *path, mkdir: bool = False) -> Optional[str]:
     """same as repo_path but create_dirname(*path) if asbsent.
          For
          example, repo_file(r, \"refs\", \"remotes\", \"origin\", \"HEAD\") will create
@@ -115,7 +59,7 @@ def repo_file(repo: GitRepository, *path, mkdir: bool = False) -> str | None:
 
 def repo_dir(
     repo: GitRepository, *path, mkdir: bool = False
-) -> str | None | Exception:
+) -> Union[str, None, Exception]:
     """same as repo path but mkdir *path if absent if mkdir"""
     path = repo_path(repo, *path)
 
@@ -143,8 +87,24 @@ def repo_default_config():
 
     return ret
 
+def gitconfig_read():
+    xdg_config_home = os.environ["XDG_CONFIG_HOME"] if "XDG_CONFIG_HOME" in os.environ else "~/.config"
+    configfiles = [
+        os.path.expanduser(os.path.join(xdg_config_home, "git/config")),
+        os.path.expanduser("~/.gitconfig")
+    ]
 
-def repo_find(path=".", required=True) -> GitRepository | None:
+    config = configparser.ConfigParser()
+    config.read(configfiles)
+    return config
+
+def gitconfig_user_get(config):
+    if "user" in config:
+        if "name" in config["user"] and "email" in config["user"]:
+            return f"{config['user']['name']} <{config['user']['email']}>"
+    return None
+    
+def repo_find(path=".", required=True) -> Optional[GitRepository]:
     path = os.path.realpath(path)
 
     if os.path.isdir(os.path.join(path, ".git")):
@@ -166,7 +126,7 @@ def repo_find(path=".", required=True) -> GitRepository | None:
     return repo_find(parent, required)
 
 
-def repo_create(path: str) -> GitRepository | None:
+def repo_create(path: str) -> Optional[GitRepository]:
     repo = GitRepository(path, True)
 
     if os.path.exists(repo.worktree):
@@ -205,4 +165,3 @@ def repo_create(path: str) -> GitRepository | None:
         config.write(f)
 
     return repo
-

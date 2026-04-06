@@ -1,5 +1,6 @@
 
 from abc import ABC, abstractmethod
+from typing import Optional
 
 
 
@@ -9,7 +10,7 @@ class GitObject(ABC):
     """Base class for all objects"""
     fmt: bytes
 
-    def __init__(self, data: bytes | None = None):
+    def __init__(self, data: Optional[bytes] = None):
         if data is None:
             self.init()
         else:
@@ -29,7 +30,6 @@ class GitObject(ABC):
     def deserialize(self, data: bytes) -> None:
         """CONVERT To python object from bytes"""
         pass
-
 
 
 

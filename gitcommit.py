@@ -1,4 +1,3 @@
-
 from gitobject import GitObject
 
 
@@ -95,3 +94,28 @@ class GitCommit(GitObject):
      def deserialize(self, data):
           self.kvlm = kvlm_parse(data)
 
+def commit_create(repo, tree, parent, author, timestamp, message):
+# Note: for the timestamp argument, you must provide a datetime object.
+    commit = GitCommit() # Create the new commit object.
+    commit.kvlm[b"tree"] = tree.encode("ascii")
+    if parent:
+        commit.kvlm[b"parent"] = parent.encode("ascii")
+
+    # Trim message and add a trailing \n
+    message = message.strip() + "\n"
+    if not message:
+        print("please provide a commit message")
+        return
+    # Format timezone
+    offset = int(timestamp.astimezone().utcoffset().total_seconds())
+    hours = offset // 3600
+    minutes = (offset % 3600) // 60
+    tz = "{}{:02}{:02}".format("+" if offset > 0 else "-", hours, minutes)
+
+    author = author + " " + str(int(timestamp.timestamp())) + " " + tz
+
+    commit.kvlm[b"author"] = author.encode("utf8")
+    commit.kvlm[b"committer"] = author.encode("utf8")
+    commit.kvlm[None] = message.encode("utf8")
+    
+    return commit

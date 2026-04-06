@@ -2,7 +2,8 @@ import os
 import zlib
 import pytest
 
-from gitrepo import GitRepository, repo_path, repo_dir, repo_file, read_object, write_object
+from gitrepo import GitRepository, repo_path, repo_dir, repo_file
+from gitstore import read_object, write_object
 from gittree import GitBlob
 
 @pytest.fixture

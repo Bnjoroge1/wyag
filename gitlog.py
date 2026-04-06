@@ -7,8 +7,7 @@ def log_graphviz(repo, sha, seen):
         return
     seen.add(sha)
 
-    # Lazy import to avoid circular imports at module import time.
-    from gitrepo import read_object
+    from gitstore import read_object
 
     commit = read_object(repo, sha)
     if not commit:
