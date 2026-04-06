@@ -108,9 +108,11 @@ def commit_create(repo, tree, parent, author, timestamp, message):
         return
     # Format timezone
     offset = int(timestamp.astimezone().utcoffset().total_seconds())
+    sign = "+" if offset >= 0 else "-"
+    offset = abs(offset)
     hours = offset // 3600
     minutes = (offset % 3600) // 60
-    tz = "{}{:02}{:02}".format("+" if offset > 0 else "-", hours, minutes)
+    tz = f"{sign}{hours:02}{minutes:02}"
 
     author = author + " " + str(int(timestamp.timestamp())) + " " + tz
 
